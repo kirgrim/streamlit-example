@@ -1,38 +1,44 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
+import pathlib
+from pathlib import Path
+
 import streamlit as st
+from fastai.vision.all import *
+from fastai.vision.widgets import *
 
-"""
-# Welcome to Streamlit!
+temp = pathlib.PosixPath
+pathlib.PosixPath = pathlib.WindowsPath
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
-
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
-
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+learn_inf = load_learner('model.pkl')
 
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+class Predict:
+    def __init__(self, filename):
+        self.learn_inference = load_learner(Path() / filename)
+        self.img = self.get_image_from_upload()
+        if self.img is not None:
+            self.display_output()
+            self.get_prediction()
 
-    Point = namedtuple('Point', 'x y')
-    data = []
+    @staticmethod
+    def get_image_from_upload():
+        uploaded_file = st.file_uploader("Upload Files", type=['png', 'jpeg', 'jpg'])
+        if uploaded_file is not None:
+            return PILImage.create((uploaded_file))
+        return None
 
-    points_per_turn = total_points / num_turns
+    def display_output(self):
+        st.image(self.img.to_thumb(250, 250), caption='Uploaded Image')
 
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
+    def get_prediction(self):
 
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+        if st.button('Classify'):
+            pred, pred_idx, probs = self.learn_inference.predict(self.img)
+            st.write(f'**Prediction**: {pred}')
+            st.write(f'**Probability**: {probs[pred_idx] * 100:.02f}%')
+        else:
+            st.write(f'Click the button to classify')
+
+
+if __name__ == '__main__':
+    file_name = 'model.pkl'
+    predictor = Predict(file_name)
