@@ -1,13 +1,11 @@
 import os
 import streamlit as st
 import pathlib
-from pathlib import Path
+temp = pathlib.PosixPath
+pathlib.PosixPath = pathlib.WindowsPath
 
 from fastai.vision.all import *
 from fastai.vision.widgets import *
-
-temp = pathlib.PosixPath
-pathlib.PosixPath = pathlib.WindowsPath
 
 
 learn_inf = load_learner('model.pkl')
